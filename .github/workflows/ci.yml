@@ -68,8 +68,10 @@ jobs:
           test -f /tmp/test-project/.pi/prompts/deep-interview.md
           test -f /tmp/test-project/.pi/prompts/project-manager.md
 
-          # Settings
+          # Settings & setup
           test -f /tmp/test-project/.pi/settings.json
+          test -f /tmp/test-project/.pi/models.json
+          test -f /tmp/test-project/.pi/setup.sh
 
           echo "All required files present."
 
@@ -98,6 +100,19 @@ jobs:
             { echo "ERROR: Unrendered Jinja tags in settings.json"; exit 1; }
 
           echo "All templates rendered correctly."
+
+      - name: Verify models.json is valid
+        run: |
+          set -e
+          python3 -c "import json; json.load(open('/tmp/test-project/.pi/models.json'))"
+          # Check expected models are present
+          grep -q "glm-4.7-flash" /tmp/test-project/.pi/models.json
+          grep -q "qwen3-coder:30b" /tmp/test-project/.pi/models.json
+          grep -q "minimax/minimax-m2.5" /tmp/test-project/.pi/models.json
+          echo "models.json valid with expected models."
+
+      - name: Verify setup.sh is valid bash
+        run: bash -n /tmp/test-project/.pi/setup.sh
 
       - name: Verify TypeScript syntax
         run: |

@@ -14,23 +14,23 @@ default_inference:
   type: str
   help: "Default inference backend"
   choices:
-    local: "Local models (Ollama — gemma4, qwen3-coder)"
-    openrouter: "OpenRouter (minimax4.7)"
+    local: "Local models (Ollama — glm-4.7-flash, qwen3-coder:30b)"
+    openrouter: "OpenRouter (minimax-m2.5)"
   default: local
 
 local_model:
   type: str
   help: "Preferred local model"
   choices:
-    gemma4: "Gemma 4"
-    qwen3-coder: "Qwen 3 Coder"
-  default: qwen3-coder
+    "qwen3-coder:30b": "Qwen3 Coder 30B MoE (reasoning + coding)"
+    "glm-4.7-flash": "GLM-4.7 Flash 30B (fast general-purpose)"
+  default: "qwen3-coder:30b"
   when: "{{ default_inference == 'local' }}"
 
 openrouter_model:
   type: str
   help: "OpenRouter model identifier"
-  default: "minimax/minimax4.7"
+  default: "minimax/minimax-m2.5"
   when: "{{ default_inference == 'openrouter' }}"
 
 enable_gh_integration:

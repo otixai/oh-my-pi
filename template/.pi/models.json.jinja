@@ -1,0 +1,25 @@
+{
+  "providers": {
+    "openrouter": {
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "api": "openai-completions",
+      "apiKey": "OPENROUTER_API_KEY",
+      "models": [
+        { "id": "minimax/minimax-m2.5", "name": "MiniMax M2.5", "reasoning": true }
+      ]
+    },
+    "ollama": {
+      "baseUrl": "http://localhost:11434/v1",
+      "api": "openai-completions",
+      "apiKey": "ollama",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      },
+      "models": [
+        { "id": "glm-4.7-flash", "name": "GLM-4.7 Flash 30B" },
+        { "id": "qwen3-coder:30b", "name": "Qwen3 Coder 30B MoE", "reasoning": true }
+      ]
+    }
+  }
+}

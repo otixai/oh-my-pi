@@ -36,10 +36,10 @@ const DEFAULT_CONFIG: InferenceConfig = {
   backends: {
     local: {
       provider: "ollama",
-      base_url: "http://localhost:11434",
+      base_url: "http://localhost:11434/v1",
       models: {
-        gemma4: { id: "gemma4", context_window: 32768, strengths: ["reasoning", "general"] },
-        "qwen3-coder": { id: "qwen3-coder", context_window: 131072, strengths: ["coding", "refactoring"] },
+        "glm-4.7-flash": { id: "glm-4.7-flash", context_window: 131072, strengths: ["reasoning", "general", "quick"] },
+        "qwen3-coder:30b": { id: "qwen3-coder:30b", context_window: 131072, strengths: ["coding", "refactoring", "reasoning"] },
       },
     },
     openrouter: {
@@ -47,15 +47,15 @@ const DEFAULT_CONFIG: InferenceConfig = {
       base_url: "https://openrouter.ai/api/v1",
       api_key_env: "OPENROUTER_API_KEY",
       models: {
-        "minimax4.7": { id: "minimax/minimax4.7", context_window: 1048576, strengths: ["long-context", "coding"] },
+        "minimax/minimax-m2.5": { id: "minimax/minimax-m2.5", context_window: 1048576, strengths: ["long-context", "coding", "reasoning"] },
       },
     },
   },
   categories: {
-    coding: { backend: "local", model: "qwen3-coder" },
-    reasoning: { backend: "local", model: "gemma4" },
-    "long-context": { backend: "openrouter", model: "minimax/minimax4.7" },
-    quick: { backend: "local", model: "gemma4" },
+    coding: { backend: "local", model: "qwen3-coder:30b" },
+    reasoning: { backend: "local", model: "qwen3-coder:30b" },
+    "long-context": { backend: "openrouter", model: "minimax/minimax-m2.5" },
+    quick: { backend: "local", model: "glm-4.7-flash" },
   },
   agent_overrides: {},
 };
