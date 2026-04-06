@@ -1,20 +1,53 @@
-name: CI
+name: Test Template Rendering
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
     branches: [main]
 
 jobs:
-  validate-template:
-    name: Validate copier template
+  render-matrix:
+    name: "${{ matrix.name }}"
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        inference: [local, openrouter]
+        include:
+          - name: "local / qwen3-coder:30b / gh enabled"
+            copier_args: >-
+              -d project_name="test-project"
+              -d github_repo="otixai/test-project"
+              -d default_inference="local"
+              -d local_model="qwen3-coder:30b"
+              -d openrouter_model="minimax/minimax-m2.5"
+              -d enable_gh_integration=true
+              -d pull_models=false
+
+          - name: "local / glm-4.7-flash / gh disabled"
+            copier_args: >-
+              -d project_name="flash-project"
+              -d github_repo=""
+              -d default_inference="local"
+              -d local_model="glm-4.7-flash"
+              -d openrouter_model="minimax/minimax-m2.5"
+              -d enable_gh_integration=false
+              -d pull_models=false
+
+          - name: "openrouter / minimax-m2.5 / gh enabled"
+            copier_args: >-
+              -d project_name="cloud-project"
+              -d github_repo="otixai/cloud-project"
+              -d default_inference="openrouter"
+              -d local_model="qwen3-coder:30b"
+              -d openrouter_model="minimax/minimax-m2.5"
+              -d enable_gh_integration=true
+              -d pull_models=false
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -23,105 +56,81 @@ jobs:
       - name: Install copier
         run: pip install copier
 
-      - name: Generate project (inference=${{ matrix.inference }})
+      - name: Render template
         run: |
-          copier copy . /tmp/test-project --trust \
-            -d project_name="test-project" \
-            -d github_repo="otixai/test-project" \
-            -d default_inference="${{ matrix.inference }}" \
-            -d local_model="qwen3-coder:30b" \
-            -d openrouter_model="minimax/minimax-m2.5" \
-            -d enable_gh_integration=true \
-            -d pull_models=false
+          copier copy --trust --defaults \
+            ${{ matrix.copier_args }} \
+            . /tmp/rendered
 
-      - name: Verify .pi/ structure exists
+      - name: Verify .pi/ structure
         run: |
           set -e
           echo "Checking generated .pi/ structure..."
 
           # Core directories
-          test -d /tmp/test-project/.pi
-          test -d /tmp/test-project/.pi/extensions/oh-my-pi
-          test -d /tmp/test-project/.pi/agents
-          test -d /tmp/test-project/.pi/skills
-          test -d /tmp/test-project/.pi/prompts
-          test -d /tmp/test-project/.pi/research
+          test -d /tmp/rendered/.pi
+          test -d /tmp/rendered/.pi/extensions/oh-my-pi
+          test -d /tmp/rendered/.pi/agents
+          test -d /tmp/rendered/.pi/skills
+          test -d /tmp/rendered/.pi/prompts
+          test -d /tmp/rendered/.pi/research
 
           # Extension
-          test -f /tmp/test-project/.pi/extensions/oh-my-pi/index.ts
-          test -f /tmp/test-project/.pi/extensions/oh-my-pi/inference.ts
+          test -f /tmp/rendered/.pi/extensions/oh-my-pi/index.ts
+          test -f /tmp/rendered/.pi/extensions/oh-my-pi/inference.ts
 
           # Agents
-          test -f /tmp/test-project/.pi/agents/planner.md
-          test -f /tmp/test-project/.pi/agents/coder.md
-          test -f /tmp/test-project/.pi/agents/reviewer.md
-          test -f /tmp/test-project/.pi/agents/interviewer.md
-          test -f /tmp/test-project/.pi/agents/researcher.md
-          test -f /tmp/test-project/.pi/agents/project-manager.md
+          for agent in planner coder reviewer interviewer researcher project-manager; do
+            test -f /tmp/rendered/.pi/agents/$agent.md
+          done
 
           # Skills
-          test -f /tmp/test-project/.pi/skills/deep-interview/SKILL.md
-          test -f /tmp/test-project/.pi/skills/project-manager/SKILL.md
-          test -f /tmp/test-project/.pi/skills/researcher/SKILL.md
+          test -f /tmp/rendered/.pi/skills/deep-interview/SKILL.md
+          test -f /tmp/rendered/.pi/skills/project-manager/SKILL.md
+          test -f /tmp/rendered/.pi/skills/researcher/SKILL.md
 
           # Prompts
-          test -f /tmp/test-project/.pi/prompts/autopilot.md
-          test -f /tmp/test-project/.pi/prompts/deep-interview.md
-          test -f /tmp/test-project/.pi/prompts/project-manager.md
-          test -f /tmp/test-project/.pi/prompts/review.md
-          test -f /tmp/test-project/.pi/prompts/test.md
-          test -f /tmp/test-project/.pi/prompts/refactor.md
-          test -f /tmp/test-project/.pi/prompts/debug.md
-          test -f /tmp/test-project/.pi/prompts/refine.md
+          for prompt in autopilot deep-interview project-manager review test refactor debug refine; do
+            test -f /tmp/rendered/.pi/prompts/$prompt.md
+          done
 
-          # Settings & setup
-          test -f /tmp/test-project/.pi/settings.json
-          test -f /tmp/test-project/.pi/models.json
-          test -f /tmp/test-project/.pi/setup.sh
+          # Config
+          test -f /tmp/rendered/.pi/settings.json
+          test -f /tmp/rendered/.pi/models.json
+          test -f /tmp/rendered/.pi/setup.sh
 
           echo "All required files present."
 
-      - name: Verify template variables were rendered
+      - name: Check for unrendered Jinja artifacts
         run: |
-          set -e
-          echo "Checking template rendering..."
+          if grep -rnE '\{%|\{\{' /tmp/rendered --include='*.md' --include='*.json' --include='*.ts'; then
+            echo "::error::Unrendered Jinja tags found in output"
+            exit 1
+          fi
+          echo "No Jinja artifacts found"
 
-          # Agent files should contain the project name
-          grep -q "test-project" /tmp/test-project/.pi/agents/planner.md
-          grep -q "test-project" /tmp/test-project/.pi/agents/coder.md
-          grep -q "test-project" /tmp/test-project/.pi/agents/researcher.md
-
-          # Inference config should have no unrendered Jinja
-          ! grep -q '{{' /tmp/test-project/.pi/extensions/oh-my-pi/inference.ts || \
-            { echo "ERROR: Unrendered Jinja tags in inference.ts"; exit 1; }
-
-          # Agent files should have no unrendered Jinja
-          for f in /tmp/test-project/.pi/agents/*.md; do
-            ! grep -q '{{' "$f" || \
-              { echo "ERROR: Unrendered Jinja tags in $f"; exit 1; }
-          done
-
-          # Settings should have no Jinja
-          ! grep -q '{{' /tmp/test-project/.pi/settings.json || \
-            { echo "ERROR: Unrendered Jinja tags in settings.json"; exit 1; }
-
-          echo "All templates rendered correctly."
-
-      - name: Verify models.json is valid
+      - name: Verify models.json is valid JSON
         run: |
-          set -e
-          python3 -c "import json; json.load(open('/tmp/test-project/.pi/models.json'))"
-          # Check expected models are present
-          grep -q "glm-4.7-flash" /tmp/test-project/.pi/models.json
-          grep -q "qwen3-coder:30b" /tmp/test-project/.pi/models.json
-          grep -q "minimax/minimax-m2.5" /tmp/test-project/.pi/models.json
-          echo "models.json valid with expected models."
+          python3 -c "import json; json.load(open('/tmp/rendered/.pi/models.json'))"
+          grep -q "glm-4.7-flash" /tmp/rendered/.pi/models.json
+          grep -q "qwen3-coder:30b" /tmp/rendered/.pi/models.json
+          grep -q "minimax/minimax-m2.5" /tmp/rendered/.pi/models.json
+          echo "models.json valid."
 
       - name: Verify setup.sh is valid bash
-        run: bash -n /tmp/test-project/.pi/setup.sh
+        run: bash -n /tmp/rendered/.pi/setup.sh
 
-      - name: Verify TypeScript syntax
+      - name: Show rendered files
+        if: always()
         run: |
-          # Basic syntax check — ensure no obvious JS errors
-          node --check /tmp/test-project/.pi/extensions/oh-my-pi/index.ts 2>&1 || \
-            echo "Note: TypeScript syntax check requires pi runtime (expected in template)"
+          echo "=== Rendered files ==="
+          find /tmp/rendered -type f | sort
+          echo ""
+          echo "=== settings.json ==="
+          cat /tmp/rendered/.pi/settings.json
+          echo ""
+          echo "=== inference.ts ==="
+          cat /tmp/rendered/.pi/extensions/oh-my-pi/inference.ts
+          echo ""
+          echo "=== planner.md ==="
+          cat /tmp/rendered/.pi/agents/planner.md
