@@ -25,13 +25,11 @@ local_model:
     "qwen3-coder:30b": "Qwen3 Coder 30B MoE (reasoning + coding)"
     "glm-4.7-flash": "GLM-4.7 Flash 30B (fast general-purpose)"
   default: "qwen3-coder:30b"
-  when: "{{ default_inference == 'local' }}"
 
 openrouter_model:
   type: str
   help: "OpenRouter model identifier"
   default: "minimax/minimax-m2.5"
-  when: "{{ default_inference == 'openrouter' }}"
 
 enable_gh_integration:
   type: bool
@@ -41,8 +39,7 @@ enable_gh_integration:
 pull_models:
   type: bool
   help: "Pull Ollama models after setup (requires ollama running)"
-  default: true
-  when: "{{ default_inference == 'local' }}"
+  default: false
 
 _tasks:
   - "chmod +x .pi/setup.sh"
