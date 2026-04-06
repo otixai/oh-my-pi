@@ -37,3 +37,20 @@ enable_gh_integration:
   type: bool
   help: "Enable GitHub CLI integration for project management"
   default: true
+
+pull_models:
+  type: bool
+  help: "Pull Ollama models after setup (requires ollama running)"
+  default: true
+  when: "{{ default_inference == 'local' }}"
+
+_tasks:
+  - "chmod +x .pi/setup.sh"
+  - "{% if default_inference == 'local' and pull_models %}bash .pi/setup.sh{% endif %}"
+
+_migrations:
+  - version: v1
+    before:
+      - "echo 'Migrating oh-my-pi to latest template version...'"
+    after:
+      - "{% if default_inference == 'local' %}bash .pi/setup.sh{% endif %}"
