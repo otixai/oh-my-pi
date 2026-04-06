@@ -1,0 +1,93 @@
+/**
+ * Inference routing — resolves which model to use based on agent, category, and config.
+ */
+
+import * as fs from "node:fs";
+import * as path from "node:path";
+
+export interface ModelConfig {
+  id: string;
+  context_window: number;
+  strengths: string[];
+}
+
+export interface BackendConfig {
+  provider: string;
+  base_url: string;
+  api_key_env?: string;
+  models: Record<string, ModelConfig>;
+}
+
+export interface InferenceConfig {
+  defaults: {
+    backend: string;
+    model: string;
+  };
+  backends: Record<string, BackendConfig>;
+  categories: Record<string, { backend: string; model: string }>;
+  agent_overrides: Record<string, { backend?: string; model?: string }>;
+}
+
+const DEFAULT_CONFIG: InferenceConfig = {
+  defaults: {
+    backend: "{{ default_inference }}",
+    model: "{% if default_inference == 'local' %}{{ local_model }}{% else %}{{ openrouter_model }}{% endif %}",
+  },
+  backends: {
+    local: {
+      provider: "ollama",
+      base_url: "http://localhost:11434",
+      models: {
+        gemma4: { id: "gemma4", context_window: 32768, strengths: ["reasoning", "general"] },
+        "qwen3-coder": { id: "qwen3-coder", context_window: 131072, strengths: ["coding", "refactoring"] },
+      },
+    },
+    openrouter: {
+      provider: "openrouter",
+      base_url: "https://openrouter.ai/api/v1",
+      api_key_env: "OPENROUTER_API_KEY",
+      models: {
+        "minimax4.7": { id: "minimax/minimax4.7", context_window: 1048576, strengths: ["long-context", "coding"] },
+      },
+    },
+  },
+  categories: {
+    coding: { backend: "local", model: "qwen3-coder" },
+    reasoning: { backend: "local", model: "gemma4" },
+    "long-context": { backend: "openrouter", model: "minimax/minimax4.7" },
+    quick: { backend: "local", model: "gemma4" },
+  },
+  agent_overrides: {},
+};
+
+export function loadInferenceConfig(piDir: string): InferenceConfig {
+  const configPath = path.join(piDir, "inference.json");
+  if (fs.existsSync(configPath)) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      return { ...DEFAULT_CONFIG, ...raw };
+    } catch {
+      return DEFAULT_CONFIG;
+    }
+  }
+  return DEFAULT_CONFIG;
+}
+
+export function resolveModel(
+  config: InferenceConfig,
+  agent?: string,
+  category?: string,
+): string | undefined {
+  // 1. Agent-specific override
+  if (agent && config.agent_overrides[agent]) {
+    return config.agent_overrides[agent].model;
+  }
+
+  // 2. Category-based routing
+  if (category && config.categories[category]) {
+    return config.categories[category].model;
+  }
+
+  // 3. Default
+  return config.defaults.model;
+}

@@ -1,0 +1,35 @@
+---
+name: project-manager
+description: Backlog grooming and issue management via GitHub CLI. Triage, label, prioritize, plan sprints, and generate reports.
+---
+
+# Project Manager
+
+Manage your GitHub backlog with agent-powered grooming.
+{% if github_repo %}
+Default repo: {{ github_repo }}
+{% endif %}
+
+## Prerequisites
+
+- [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh auth login`)
+
+## Usage
+
+```
+/skill:project-manager triage
+/skill:project-manager groom #42
+/skill:project-manager sprint
+/skill:project-manager stale
+/skill:project-manager report
+```
+
+Or use the `/pm` command directly.
+
+## Label Schema
+
+| Category | Labels |
+|----------|--------|
+| Type | `bug`, `feature`, `enhancement`, `question`, `docs`, `chore` |
+| Priority | `priority:critical`, `priority:high`, `priority:medium`, `priority:low` |
+| Size | `size:xs`, `size:s`, `size:m`, `size:l`, `size:xl` |
