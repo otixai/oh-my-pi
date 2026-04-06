@@ -29,9 +29,10 @@ jobs:
             -d project_name="test-project" \
             -d github_repo="otixai/test-project" \
             -d default_inference="${{ matrix.inference }}" \
-            -d local_model="qwen3-coder" \
-            -d openrouter_model="minimax/minimax4.7" \
-            -d enable_gh_integration=true
+            -d local_model="qwen3-coder:30b" \
+            -d openrouter_model="minimax/minimax-m2.5" \
+            -d enable_gh_integration=true \
+            -d pull_models=false
 
       - name: Verify .pi/ structure exists
         run: |
