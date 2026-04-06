@@ -12,18 +12,18 @@ github_repo:
 
 default_inference:
   type: str
-  help: "Default inference backend"
+  help: "Default inference backend (local = Ollama, openrouter = OpenRouter)"
   choices:
-    local: "Local models (Ollama — glm-4.7-flash, qwen3-coder:30b)"
-    openrouter: "OpenRouter (minimax-m2.5)"
+    - local
+    - openrouter
   default: local
 
 local_model:
   type: str
   help: "Preferred local model"
   choices:
-    "qwen3-coder:30b": "Qwen3 Coder 30B MoE (reasoning + coding)"
-    "glm-4.7-flash": "GLM-4.7 Flash 30B (fast general-purpose)"
+    - "qwen3-coder:30b"
+    - "glm-4.7-flash"
   default: "qwen3-coder:30b"
 
 openrouter_model:
