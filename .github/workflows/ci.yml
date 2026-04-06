@@ -68,6 +68,11 @@ jobs:
           test -f /tmp/test-project/.pi/prompts/autopilot.md
           test -f /tmp/test-project/.pi/prompts/deep-interview.md
           test -f /tmp/test-project/.pi/prompts/project-manager.md
+          test -f /tmp/test-project/.pi/prompts/review.md
+          test -f /tmp/test-project/.pi/prompts/test.md
+          test -f /tmp/test-project/.pi/prompts/refactor.md
+          test -f /tmp/test-project/.pi/prompts/debug.md
+          test -f /tmp/test-project/.pi/prompts/refine.md
 
           # Settings & setup
           test -f /tmp/test-project/.pi/settings.json
