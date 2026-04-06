@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# oh-my-pi command runner for {{ project_name }}
+# Routes slash commands to the appropriate agent team with inference config
+
+set -euo pipefail
+
+PI_DIR="$(cd "$(dirname "$0")" && pwd)"
+COMMANDS_DIR="$PI_DIR/commands"
+CONFIG_DIR="$PI_DIR/config"
+
+usage() {
+  echo "Usage: pi <command> [args...]"
+  echo ""
+  echo "Commands:"
+  echo "  autopilot <task>           Autonomous plan-code-review loop"
+  echo "  deep-interview <task>      Socratic context builder"
+  echo "  project-manager <sub>      Backlog grooming (triage|groom|sprint|stale|report)"
+  echo "  list                       Show available commands"
+  echo ""
+  echo "Options:"
+  echo "  --backend <local|openrouter>   Override inference backend"
+  echo "  --model <model-id>             Override model"
+  exit 1
+}
+
+# Parse global options
+BACKEND_OVERRIDE=""
+MODEL_OVERRIDE=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --backend) BACKEND_OVERRIDE="$2"; shift 2 ;;
+    --model) MODEL_OVERRIDE="$2"; shift 2 ;;
+    -*) echo "Unknown option: $1"; usage ;;
+    *) break ;;
+  esac
+done
+
+COMMAND="${1:-}"
+shift || true
+
+if [[ -z "$COMMAND" ]]; then
+  usage
+fi
+
+COMMAND_FILE="$COMMANDS_DIR/$COMMAND.md"
+
+if [[ ! -f "$COMMAND_FILE" ]]; then
+  echo "Error: Unknown command '$COMMAND'"
+  echo "Run 'pi list' to see available commands"
+  exit 1
+fi
+
+# Resolve inference backend
+if [[ -n "$BACKEND_OVERRIDE" ]]; then
+  BACKEND="$BACKEND_OVERRIDE"
+else
+  BACKEND="{{ default_inference }}"
+fi
+
+if [[ -n "$MODEL_OVERRIDE" ]]; then
+  MODEL="$MODEL_OVERRIDE"
+elif [[ "$BACKEND" == "local" ]]; then
+  MODEL="{{ local_model | default('qwen3-coder') }}"
+else
+  MODEL="{{ openrouter_model | default('minimax/minimax4.7') }}"
+fi
+
+# Check prerequisites
+if [[ "$BACKEND" == "local" ]]; then
+  if ! command -v ollama &>/dev/null; then
+    echo "Error: ollama not found. Install from https://ollama.com"
+    exit 1
+  fi
+  if ! curl -s http://localhost:11434/api/tags &>/dev/null; then
+    echo "Error: ollama server not running. Start with: ollama serve"
+    exit 1
+  fi
+elif [[ "$BACKEND" == "openrouter" ]]; then
+  if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+    echo "Error: OPENROUTER_API_KEY not set"
+    exit 1
+  fi
+fi
+
+echo "┌─────────────────────────────────────┐"
+echo "│ pi/$COMMAND"
+echo "│ backend: $BACKEND | model: $MODEL"
+echo "└─────────────────────────────────────┘"
+echo ""
+
+# Export for downstream use
+export PI_BACKEND="$BACKEND"
+export PI_MODEL="$MODEL"
+export PI_COMMAND="$COMMAND"
+export PI_COMMAND_FILE="$COMMAND_FILE"
+export PI_CONFIG_DIR="$CONFIG_DIR"
+export PI_ARGS="$*"
+
+# The command .md file contains the system prompt and workflow.
+# The host agent (pi, claude, etc.) reads it and executes accordingly.
+# For now, output the command file content so it can be piped to an agent.
+cat "$COMMAND_FILE"

@@ -1,0 +1,37 @@
+# Inference routing configuration for {{ project_name }}
+# Switch backends per-command or globally
+
+defaults:
+  backend: {{ default_inference }}
+{% if default_inference == 'local' %}
+  model: {{ local_model }}
+{% else %}
+  model: {{ openrouter_model }}
+{% endif %}
+
+backends:
+  local:
+    provider: ollama
+    base_url: "http://localhost:11434"
+    models:
+      gemma4:
+        id: gemma4
+        context_window: 32768
+        strengths: [reasoning, general]
+      qwen3-coder:
+        id: qwen3-coder
+        context_window: 131072
+        strengths: [coding, refactoring, analysis]
+
+  openrouter:
+    provider: openrouter
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: OPENROUTER_API_KEY
+    models:
+      minimax4.7:
+        id: minimax/minimax4.7
+        context_window: 1048576
+        strengths: [long-context, coding, reasoning]
+
+# Per-command overrides (command name -> backend/model)
+overrides: {}

@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-template:
+    name: Validate copier template
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        inference: [local, openrouter]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install copier
+        run: pip install copier
+
+      - name: Generate project (inference=${{ matrix.inference }})
+        run: |
+          copier copy . /tmp/test-project --trust \
+            -d project_name="test-project" \
+            -d github_repo="otixai/test-project" \
+            -d default_inference="${{ matrix.inference }}" \
+            -d local_model="qwen3-coder" \
+            -d openrouter_model="minimax/minimax4.7" \
+            -d enable_gh_integration=true
+
+      - name: Verify .pi/ structure exists
+        run: |
+          set -e
+          echo "Checking generated .pi/ structure..."
+
+          # Required directories
+          test -d /tmp/test-project/.pi
+          test -d /tmp/test-project/.pi/commands
+          test -d /tmp/test-project/.pi/config
+
+          # Required files
+          test -f /tmp/test-project/.pi/run.sh
+          test -f /tmp/test-project/.pi/config/inference.yml
+          test -f /tmp/test-project/.pi/config/agents.yml
+          test -f /tmp/test-project/.pi/config/project.yml
+
+          # Required commands
+          test -f /tmp/test-project/.pi/commands/autopilot.md
+          test -f /tmp/test-project/.pi/commands/deep-interview.md
+          test -f /tmp/test-project/.pi/commands/project-manager.md
+          test -f /tmp/test-project/.pi/commands/list.md
+
+          echo "All required files present."
+
+      - name: Verify template variables were rendered
+        run: |
+          set -e
+          echo "Checking template rendering..."
+
+          # Config files should contain the project name, not Jinja tags
+          grep -q "test-project" /tmp/test-project/.pi/config/project.yml
+          grep -q "test-project" /tmp/test-project/.pi/config/agents.yml
+          ! grep -q '{{' /tmp/test-project/.pi/config/inference.yml || \
+            { echo "ERROR: Unrendered Jinja tags in inference.yml"; exit 1; }
+          ! grep -q '{{' /tmp/test-project/.pi/config/agents.yml || \
+            { echo "ERROR: Unrendered Jinja tags in agents.yml"; exit 1; }
+          ! grep -q '{{' /tmp/test-project/.pi/config/project.yml || \
+            { echo "ERROR: Unrendered Jinja tags in project.yml"; exit 1; }
+          ! grep -q '{{' /tmp/test-project/.pi/run.sh || \
+            { echo "ERROR: Unrendered Jinja tags in run.sh"; exit 1; }
+
+          echo "All templates rendered correctly."
+
+      - name: Verify inference config matches selection
+        run: |
+          set -e
+          grep -q "backend: ${{ matrix.inference }}" /tmp/test-project/.pi/config/inference.yml
+          echo "Inference backend correctly set to ${{ matrix.inference }}."
+
+      - name: Verify run.sh is valid bash
+        run: bash -n /tmp/test-project/.pi/run.sh
+
+      - name: Verify run.sh help works
+        run: |
+          chmod +x /tmp/test-project/.pi/run.sh
+          /tmp/test-project/.pi/run.sh list

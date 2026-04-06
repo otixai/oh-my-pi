@@ -1,0 +1,39 @@
+_min_copier_version: "9.0.0"
+_subdirectory: template
+
+project_name:
+  type: str
+  help: "Project name (used in prompts and agent identity)"
+
+github_repo:
+  type: str
+  help: "GitHub repo in owner/repo format (for gh CLI integration)"
+  default: ""
+
+default_inference:
+  type: str
+  help: "Default inference backend"
+  choices:
+    local: "Local models (Ollama — gemma4, qwen3-coder)"
+    openrouter: "OpenRouter (minimax4.7)"
+  default: local
+
+local_model:
+  type: str
+  help: "Preferred local model"
+  choices:
+    gemma4: "Gemma 4"
+    qwen3-coder: "Qwen 3 Coder"
+  default: qwen3-coder
+  when: "{{ default_inference == 'local' }}"
+
+openrouter_model:
+  type: str
+  help: "OpenRouter model identifier"
+  default: "minimax/minimax4.7"
+  when: "{{ default_inference == 'openrouter' }}"
+
+enable_gh_integration:
+  type: bool
+  help: "Enable GitHub CLI integration for project management"
+  default: true
