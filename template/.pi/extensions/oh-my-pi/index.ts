@@ -242,13 +242,13 @@ export default function ohMyPi(pi: ExtensionAPI) {
         if (fs.existsSync(promptFile)) {
           const template = fs.readFileSync(promptFile, "utf-8");
           ctx.ui.notify(`${cmd.name} started`, "info");
-          ctx.sendUserMessage(
+          pi.sendUserMessage(
             input
               ? `${template}\n\n## ${cmd.inputLabel}\n\n${input}`
               : template,
           );
         } else {
-          ctx.sendUserMessage(
+          pi.sendUserMessage(
             input
               ? `${cmd.fallback}\n\n## ${cmd.inputLabel}\n\n${input}`
               : cmd.fallback,
@@ -271,7 +271,7 @@ export default function ohMyPi(pi: ExtensionAPI) {
         fs.mkdirSync(researchDir, { recursive: true });
       }
       ctx.ui.notify("Research started", "info");
-      ctx.sendUserMessage(
+      pi.sendUserMessage(
         `Use the delegate_task tool with agent 'researcher' to investigate the following.\n` +
           `The researcher will verify against actual installed versions and source code, ` +
           `then save findings to .pi/research/ as a markdown reference doc.\n\n` +
